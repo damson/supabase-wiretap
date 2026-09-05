@@ -77,7 +77,7 @@ jobs:
           npm install --no-audit --no-fund "$GITHUB_WORKSPACE/$tarball"
           cat > smoke.mjs <<'EOF'
           import assert from 'node:assert/strict';
-          import { fakeSupabase, CHAIN_METHODS } from 'supabase-call-recorder';
+          import { fakeSupabase, CHAIN_METHODS } from 'supabase-wiretap';
 
           const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
           const answer = await fake.client.from('entries').select('id').eq('status', 'pending');

@@ -10,8 +10,8 @@ something is worth raising, it is.
 Three commands, and you need nothing beyond Node 20 or newer.
 
 ```sh
-git clone https://github.com/damson/supabase-call-recorder.git
-cd supabase-call-recorder
+git clone https://github.com/damson/supabase-wiretap.git
+cd supabase-wiretap
 npm install
 ```
 

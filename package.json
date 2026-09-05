@@ -1,5 +1,5 @@
 {
-  "name": "supabase-call-recorder",
+  "name": "supabase-wiretap",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
@@ -7,12 +7,12 @@
   "description": "A recording stand-in for the supabase-js query builder: it records the calls a test can assert on, and never simulates a database.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/damson/supabase-call-recorder.git"
+    "url": "git+https://github.com/damson/supabase-wiretap.git"
   },
   "bugs": {
-    "url": "https://github.com/damson/supabase-call-recorder/issues"
+    "url": "https://github.com/damson/supabase-wiretap/issues"
   },
-  "homepage": "https://github.com/damson/supabase-call-recorder#readme",
+  "homepage": "https://github.com/damson/supabase-wiretap#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

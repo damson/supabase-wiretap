@@ -15,10 +15,10 @@ locally in this repository. The two are deliberately separate.
 
 ## Still open
 
-1. **The name.** `supabase-call-recorder` is a working name, chosen because it
-   states the design stance. It was unclaimed on the registry when this was
-   written, which is worth rechecking, and a scoped name under an organisation
-   may be preferable.
+1. **A scope, or none.** `supabase-wiretap` is settled, and it was unclaimed on
+   the registry when this was written. Recheck that immediately before the first
+   publish, because a name can be taken in the meantime. Publishing under an
+   organisation scope instead is the only part of the naming question still open.
 2. **Whether the origin project consumes this or keeps its own copy.** The
    extracted API is a superset of the original, so adopting it is an import
    change and the removal of one file. Keeping the copy is also fine, and costs
