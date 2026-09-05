@@ -2,9 +2,17 @@
   "name": "supabase-call-recorder",
   "version": "0.1.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "author": "Damien D. <devddagnet@gmail.com>",
   "description": "A recording stand-in for the supabase-js query builder: it records the calls a test can assert on, and never simulates a database.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/damson/supabase-call-recorder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/damson/supabase-call-recorder/issues"
+  },
+  "homepage": "https://github.com/damson/supabase-call-recorder#readme",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +24,8 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
@@ -27,13 +36,16 @@
     "postgrest",
     "testing",
     "test-double",
+    "mock",
     "fake",
-    "vitest"
+    "vitest",
+    "typescript"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "prepack": "npm run build",
     "verify": "npm run typecheck && npm run test:coverage && npm run build"

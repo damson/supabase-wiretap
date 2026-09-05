@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # The package ships no runtime dependencies, so everything here is a devDependency
+  # of the build and the test suite. Grouped and monthly, because a stream of
+  # single-bump pull requests on a repository this size is noise.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

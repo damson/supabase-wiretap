@@ -1,0 +1,36 @@
+name: Feature request or missing method
+description: Something you needed and could not do, including a builder method that is not recorded.
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A missing builder method is the most common request here, and it is
+        welcome. It is usually a one-word change plus a test, so a pull request
+        is very much an option too.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What were you trying to test?
+      description: The situation, rather than the solution. It often turns out there is already a way.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help
+      description: Optional. A sketch of the API you had in mind.
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      description: >
+        One rule shapes this package: it records calls and never simulates a
+        database. Anything that would let it answer a query from rows it stored
+        earlier is out of scope, however convenient. The reasoning is in the
+        README.
+      options:
+        - label: As far as I can tell, this does not require storing rows and answering queries from them.

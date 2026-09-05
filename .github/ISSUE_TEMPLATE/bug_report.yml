@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not behave the way the README says it does.
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. A failing test is the best bug report there
+        is, and this package is small enough that writing one is often quicker
+        than describing the problem. If you have one, paste it below and skip
+        most of the rest.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect to see instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: The smallest code that shows it
+      description: A test, or the few lines that go wrong. It will be formatted as TypeScript automatically.
+      render: typescript
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version of this package
+      placeholder: '0.1.0'
+    validations:
+      required: true
+
+  - type: input
+    id: runner
+    attributes:
+      label: Test runner and Node version
+      placeholder: 'Vitest 2.1.9, Node 20.11.0'
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: Optional. Anything that might matter, including a guess at the cause.

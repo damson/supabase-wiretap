@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify on Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      # Every supported version reports, rather than the first failure hiding
+      # the rest.
+      fail-fast: false
+      matrix:
+        # The floor declared in package.json `engines`, plus the versions people
+        # actually run. A package that claims Node 20 and is only ever tested on
+        # the newest release is claiming something nobody checked.
+        node: ['20', '22', '24']
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test, with the 100% coverage thresholds enforced
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+  package:
+    name: the tarball installs and imports
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      # "It compiles" is not the same claim as "somebody could install this and
+      # use it". The only way to make the second claim is to install the
+      # artefact from outside the project and run it.
+      - name: Pack, install elsewhere, and use it
+        run: |
+          set -euo pipefail
+          tarball="$(npm pack --silent)"
+          mkdir -p /tmp/consumer
+          cd /tmp/consumer
+          printf '{"name":"consumer","private":true,"type":"module","version":"1.0.0"}\n' > package.json
+          npm install --no-audit --no-fund "$GITHUB_WORKSPACE/$tarball"
+          cat > smoke.mjs <<'EOF'
+          import assert from 'node:assert/strict';
+          import { fakeSupabase, CHAIN_METHODS } from 'supabase-call-recorder';
+
+          const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
+          const answer = await fake.client.from('entries').select('id').eq('status', 'pending');
+          await fake.client.from('entries').insert({ lemma: 'kaz' });
+
+          assert.deepEqual(answer.data, [{ id: 'e1' }]);
+          assert.deepEqual(fake.calls[0].ops, [['select', 'id'], ['eq', 'status', 'pending']]);
+          assert.deepEqual(fake.writes('entries', 'insert'), [{ lemma: 'kaz' }]);
+          assert.equal(fake.touched('nowhere'), false);
+          assert.ok(CHAIN_METHODS.length > 0);
+          console.log('the packed tarball installs, imports and records.');
+          EOF
+          node smoke.mjs
