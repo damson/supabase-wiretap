@@ -23,16 +23,12 @@ Four decisions are open, all of them the maintainer's:
 4. **Where it lives.** Personal account or organisation, and under which
    repository name.
 
-## Check before the first publish
+## Identities
 
-The `author` field reads `devddagnet@mgmail.com`, transcribed exactly as given.
-`mgmail.com` may be intended, and it may be a slip for `gmail.com`. An author
-address goes to the registry with the package and cannot be edited off a
-published version, so confirm the spelling before the first publish rather than
-after.
-
-Git commits use `damson@users.noreply.github.com`, set locally in this
-repository. The two identities are deliberately separate.
+The `author` field, which goes to the registry with the package, is
+`devddagnet@gmail.com`. Git commits use `damson@users.noreply.github.com`, set
+locally in this repository. The two are deliberately separate, and neither is
+the address the origin project's commits carry.
 
 ## The steps, in order, when those are settled
 

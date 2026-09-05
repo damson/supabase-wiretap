@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
-  "author": "Damien D. <devddagnet@mgmail.com>",
+  "author": "Damien D. <devddagnet@gmail.com>",
   "description": "A recording stand-in for the supabase-js query builder: it records the calls a test can assert on, and never simulates a database.",
   "type": "module",
   "main": "./dist/index.js",
