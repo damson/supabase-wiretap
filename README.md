@@ -1,6 +1,6 @@
-# supabase-call-recorder
+# supabase-wiretap
 
-[![CI](https://github.com/damson/supabase-call-recorder/actions/workflows/ci.yml/badge.svg)](https://github.com/damson/supabase-call-recorder/actions/workflows/ci.yml)
+[![CI](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml/badge.svg)](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml)
 [![coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](#how-it-is-tested)
 [![licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![node >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](#requirements)
@@ -15,8 +15,12 @@ right values, to the right table.
 
 No container to start. No fixtures to reset. Tests run in milliseconds.
 
+The name is the design. A tap sits on the line, writes down everything that goes
+past, and changes none of it. This is not a database and
+[deliberately cannot become one](#the-idea-behind-it).
+
 ```ts
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 
 // 1. Decide what the database "says" back.
 const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
@@ -93,7 +97,7 @@ dependency, and not a peer dependency.
 ## Install
 
 ```sh
-npm install --save-dev supabase-call-recorder
+npm install --save-dev supabase-wiretap
 ```
 
 ## Your first test
@@ -120,7 +124,7 @@ The function you pass is called for every query. It receives the call, and
 returns what the database should reply with.
 
 ```ts
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 
 const fake = fakeSupabase(() => ({ data: { lemma: 'kaz' }, error: null }));
 ```
@@ -146,7 +150,7 @@ That is a complete test. Put together:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 import { approveEntry } from './approve';
 
 describe('approveEntry', () => {
@@ -214,7 +218,7 @@ return nothing to mean "no opinion", which is answered with
 `{ data: null, error: null }`.
 
 ```ts
-import { fakeSupabase, type Responder } from 'supabase-call-recorder';
+import { fakeSupabase, type Responder } from 'supabase-wiretap';
 
 const responder: Responder = (call) => {
   if (call.table === 'review_items') return { data: [{ id: 'r1' }], error: null };
