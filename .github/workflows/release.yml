@@ -1,0 +1,91 @@
+name: Release
+
+# Publishes to npm from a tag, so the tarball on the registry comes from a
+# commit anyone can look at rather than from somebody's laptop.
+#
+# It cannot fire by accident. Three things have to be true first, and the guards
+# below say which one is missing rather than failing halfway through a publish:
+#
+#   1. `private: true` has to come out of package.json. It is there deliberately
+#      as a stop on publishing before the open decisions are settled.
+#   2. `NPM_TOKEN` has to exist as a repository secret, as a granular automation
+#      token rather than a classic one.
+#   3. The tag has to match the version in package.json, because a tag that
+#      claims one version while the tarball carries another is a supply-chain
+#      problem in slow motion.
+#
+# `--provenance` needs `id-token: write`. It makes npm show a verifiable link
+# from the published tarball back to this workflow run and this commit.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm-publish
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm ci --no-audit --no-fund
+
+      # The same gate as every pull request. A release that skips the checks is
+      # a release nobody checked.
+      - name: Verify
+        run: npm run verify
+
+      - name: Refuse a release the repository is not ready for
+        env:
+          HAS_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+          REF_NAME: ${{ github.ref_name }}
+          IS_TAG: ${{ github.ref_type == 'tag' }}
+        run: |
+          set -euo pipefail
+          fail=0
+
+          if [ "$(node -p "require('./package.json').private === true")" = "true" ]; then
+            echo '::error::package.json still carries "private": true. That is the deliberate stop on publishing; remove it in the change that decides the name and the licence, not here.'
+            fail=1
+          fi
+
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo '::error::NPM_TOKEN is not set on the npm-publish environment. Create a granular automation token on npm and add it there.'
+            fail=1
+          fi
+
+          if [ "$IS_TAG" = "true" ]; then
+            version="$(node -p "require('./package.json').version")"
+            if [ "$REF_NAME" != "v$version" ]; then
+              echo "::error::Tag $REF_NAME does not match package.json version $version. Publishing them out of step is a supply-chain problem in slow motion."
+              fail=1
+            fi
+          fi
+
+          [ "$fail" -eq 0 ] || exit 1
+          echo "Ready to publish."
+
+      # The last checkpoint that still costs nothing. A version published to the
+      # registry cannot be replaced, only deprecated.
+      - name: Dry run
+        run: npm publish --dry-run --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
