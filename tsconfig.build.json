@@ -3,6 +3,10 @@
   "compilerOptions": {
     "noEmit": false,
     "outDir": "dist",
+    // Explicit, not inferred. TypeScript used to infer it from the common
+    // source directory and now refuses to, so without this the build fails
+    // with TS5011 the moment the compiler is upgraded.
+    "rootDir": "src",
     "declarationMap": true,
     "sourceMap": true
   },
