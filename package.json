@@ -1,0 +1,45 @@
+{
+  "name": "supabase-call-recorder",
+  "version": "0.1.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "A recording stand-in for the supabase-js query builder: it records the calls a test can assert on, and never simulates a database.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "supabase",
+    "postgrest",
+    "testing",
+    "test-double",
+    "fake",
+    "vitest"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "prepack": "npm run build",
+    "verify": "npm run typecheck && npm run test:coverage && npm run build"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.9"
+  }
+}
