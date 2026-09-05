@@ -23,11 +23,23 @@ Four decisions are open, all of them the maintainer's:
 4. **Where it lives.** Personal account or organisation, and under which
    repository name.
 
+## Check before the first publish
+
+The `author` field reads `devddagnet@mgmail.com`, transcribed exactly as given.
+`mgmail.com` may be intended, and it may be a slip for `gmail.com`. An author
+address goes to the registry with the package and cannot be edited off a
+published version, so confirm the spelling before the first publish rather than
+after.
+
+Git commits use `damson@users.noreply.github.com`, set locally in this
+repository. The two identities are deliberately separate.
+
 ## The steps, in order, when those are settled
 
 ```sh
-# 1. add LICENSE, set the matching "license" field in package.json
-# 2. remove "private": true
+# 1. confirm the author address in package.json
+# 2. add LICENSE, set the matching "license" field in package.json
+# 3. remove "private": true
 npm run verify        # typecheck, 100% coverage, build
 npm pack              # inspect the tarball contents one more time
 npm publish --dry-run # prints exactly what would be uploaded, uploads nothing

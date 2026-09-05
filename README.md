@@ -64,9 +64,13 @@ answer. This owns the rest, which is most of them.
 npm install --save-dev supabase-call-recorder
 ```
 
-Node 20 or newer. ESM only. Written for Vitest, but nothing in it is
-Vitest-specific: it is a plain function returning a plain object, so Jest,
-`node:test` and anything else work the same way.
+Node 20 or newer, and ESM only: there is no CommonJS build, so a runner that
+cannot `import` an ES module cannot load this.
+
+Nothing in it is Vitest-specific. It is a plain function returning a plain
+object, so `node:test` and anything else use it the same way. Jest needs its own
+ESM support turned on, or a transform, which is a Jest configuration problem
+rather than anything this package can fix.
 
 ## The shape of it
 
