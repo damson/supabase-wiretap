@@ -51,6 +51,7 @@
     "verify": "npm run typecheck && npm run test:coverage && npm run build"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.115.0",
     "@vitest/coverage-v8": "^4.1.11",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"
