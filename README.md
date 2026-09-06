@@ -1,3 +1,5 @@
+![supabase-wiretap: a recording stand-in for the Supabase query builder. Calls recorded, every one in order. Writes captured. Database simulated: none, by design. Dependencies: zero.](.github/social-preview/preview.png)
+
 # supabase-wiretap
 
 [![CI](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml/badge.svg)](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml)
