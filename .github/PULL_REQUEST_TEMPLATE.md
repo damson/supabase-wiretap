@@ -6,7 +6,7 @@
     └─────────────────────────────────────────────────────────────────────┘
 
     ALWAYS PRESENT, four sections, however small the change:
-        👥 In plain words · 📋 What changed · ✅ Test plan · 🔍 Review
+        🔭 High level summary · 📋 What changed · ✅ Test plan · 🔍 Review
 
     CONDITIONAL, two sections. Each is wrapped in its own comment block
     below. If it does not apply, DELETE the block outright, header and all.
@@ -18,16 +18,17 @@
     about an approach, open it early and ask.
 -->
 
-## 👥 In plain words
+## 🔭 High level summary
 
 <!--
-    What is different for someone using this package, in language a person who
-    does not know the codebase can follow. One short paragraph.
+    The shape of the change in a few sentences: what it does, why it is here,
+    and anything a reviewer needs to know before the detail below makes sense.
 
-    The register to aim for:
-    "Before, if your code called the database twice, a test could only check the
-    second call. Now it sees both, in order, so a test can prove the first one
-    happened at all."
+    Aim at the level someone wants before opening the diff, not a restatement of
+    it:
+    "Records calls in order rather than keeping only the last one, so a test can
+    assert on a sequence. Additive: nothing already written against the package
+    changes behaviour."
 -->
 
 ## 📋 What changed
