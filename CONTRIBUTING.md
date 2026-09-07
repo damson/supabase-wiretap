@@ -10,8 +10,8 @@ something is worth raising, it is.
 Three commands, and you need nothing beyond Node 20 or newer.
 
 ```sh
-git clone https://github.com/damson/supabase-call-recorder.git
-cd supabase-call-recorder
+git clone https://github.com/damson/supabase-wiretap.git
+cd supabase-wiretap
 npm install
 ```
 
@@ -65,6 +65,22 @@ The most common contribution, and the easiest. Add the name to `CHAIN_METHODS`
 in `src/index.ts`, in roughly the order PostgREST documents it. The existing test
 already loops over the whole list, so it is covered the moment you add it. Then
 add a line to the method list in the README.
+
+If you are adding it because your own code needed it, please also add a call
+chain that uses it to `src/compat.test.ts`. That file is typed against the real
+`SupabaseClient`, so it is the only place where "real code needs this" is
+actually asserted rather than assumed.
+
+## The two test files
+
+- `src/index.test.ts` calls the recorder directly. Fast, exhaustive, and it
+  agrees with itself by construction: it can only exercise methods the package
+  already has.
+- `src/compat.test.ts` writes the code a real project writes, typed with
+  `SupabaseClient` from `@supabase/supabase-js`, and runs it against the
+  recorder. This is where a gap between this package and the real API surfaces.
+  `@supabase/supabase-js` is a devDependency for that file alone; the published
+  package still has no dependencies of any kind.
 
 ## Coverage
 

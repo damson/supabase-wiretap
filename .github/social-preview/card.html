@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>wiretap: the exhibit</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Archivo:wght@800&display=swap" rel="stylesheet">
+<style>
+/* THESIS: a wiretap produces evidence, so the card is the exhibit label the
+   evidence arrives under. Physical object, typed fields, no screen chrome. */
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1280px; height:640px; }
+body { overflow:hidden; -webkit-font-smoothing:antialiased; }
+
+.card {
+  position:relative; width:1280px; height:640px;
+  background:#c2a06a;
+  /* card stock, not a flat fill: fibre and a slight bloom from the top edge */
+  background-image:
+    radial-gradient(120% 80% at 30% -10%, rgba(255,246,224,.55), rgba(255,246,224,0) 60%),
+    repeating-linear-gradient(94deg, rgba(120,92,48,.055) 0 2px, rgba(120,92,48,0) 2px 5px),
+    repeating-linear-gradient(3deg, rgba(120,92,48,.045) 0 3px, rgba(120,92,48,0) 3px 7px),
+    linear-gradient(#c9a875, #b8945d);
+  color:#241c10;
+  font-family:'Courier Prime', monospace;
+  padding:66px 88px;
+}
+
+/* the punched hole and its reinforcement, top left, as a tag has */
+.hole { position:absolute; top:52px; left:1112px; width:44px; height:44px;
+  border-radius:50%; background:#1d1710;
+  box-shadow:0 0 0 9px rgba(36,28,16,.14), inset 0 3px 5px rgba(0,0,0,.55); }
+
+h1 { font-family:'Archivo', sans-serif; font-weight:800; font-size:78px;
+  letter-spacing:-0.035em; line-height:1; margin-bottom:8px; }
+.sub { font-size:25px; font-weight:700; letter-spacing:.02em; margin-bottom:44px; }
+
+/* typed fields, leader dots drawn rather than typed so they never wrap oddly */
+.f { display:flex; align-items:baseline; font-size:27px; font-weight:700; margin-bottom:32px; }
+.f .k { letter-spacing:.14em; flex:none; }
+.f .dots { flex:1; border-bottom:3px dotted rgba(36,28,16,.42); margin:0 18px; transform:translateY(-7px); }
+.f .v { flex:none; letter-spacing:-.01em; }
+
+.stamp {
+  position:absolute; right:82px; bottom:56px;
+  border:5px solid #9c3222; color:#9c3222;
+  padding:12px 22px 14px; transform:rotate(-6deg);
+  font-family:'Archivo', sans-serif; font-weight:800; font-size:34px; letter-spacing:.06em;
+  opacity:.9;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="hole"></div>
+  <h1>supabase&#8209;wiretap</h1>
+  <div class="sub">RECORDING STAND-IN FOR THE SUPABASE QUERY BUILDER</div>
+
+  <div class="f"><span class="k">CALLS RECORDED</span><span class="dots"></span><span class="v">every one, in order</span></div>
+  <div class="f"><span class="k">WRITES CAPTURED</span><span class="dots"></span><span class="v">writes() / touched()</span></div>
+  <div class="f"><span class="k">DATABASE SIMULATED</span><span class="dots"></span><span class="v">none, by design</span></div>
+  <div class="f"><span class="k">DEPENDENCIES</span><span class="dots"></span><span class="v">zero</span></div>
+  <div class="f"><span class="k">TRANSPORT FAILURE</span><span class="dots"></span><span class="v">rejects, like the real one</span></div>
+
+  <div class="stamp">ON THE RECORD</div>
+</div>
+</body>
+</html>

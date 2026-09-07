@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question about using this package
-    url: https://github.com/damson/supabase-call-recorder/discussions
+    url: https://github.com/damson/supabase-wiretap/discussions
     about: Ask anything. No question is too small, and answers often become README improvements.
   - name: Security problem
-    url: https://github.com/damson/supabase-call-recorder/security/policy
+    url: https://github.com/damson/supabase-wiretap/security/policy
     about: Please report privately rather than in a public issue.

@@ -1,6 +1,8 @@
-# supabase-call-recorder
+![supabase-wiretap: a recording stand-in for the Supabase query builder. Calls recorded, every one in order. Writes captured. Database simulated: none, by design. Dependencies: zero.](.github/social-preview/preview.png)
 
-[![CI](https://github.com/damson/supabase-call-recorder/actions/workflows/ci.yml/badge.svg)](https://github.com/damson/supabase-call-recorder/actions/workflows/ci.yml)
+# supabase-wiretap
+
+[![CI](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml/badge.svg)](https://github.com/damson/supabase-wiretap/actions/workflows/ci.yml)
 [![coverage 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](#how-it-is-tested)
 [![licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
 [![node >=20](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](#requirements)
@@ -15,8 +17,12 @@ right values, to the right table.
 
 No container to start. No fixtures to reset. Tests run in milliseconds.
 
+The name is the design. A tap sits on the line, writes down everything that goes
+past, and changes none of it. This is not a database and
+[deliberately cannot become one](#the-idea-behind-it).
+
 ```ts
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 
 // 1. Decide what the database "says" back.
 const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
@@ -93,7 +99,7 @@ dependency, and not a peer dependency.
 ## Install
 
 ```sh
-npm install --save-dev supabase-call-recorder
+npm install --save-dev supabase-wiretap
 ```
 
 ## Your first test
@@ -120,7 +126,7 @@ The function you pass is called for every query. It receives the call, and
 returns what the database should reply with.
 
 ```ts
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 
 const fake = fakeSupabase(() => ({ data: { lemma: 'kaz' }, error: null }));
 ```
@@ -146,7 +152,7 @@ That is a complete test. Put together:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { fakeSupabase } from 'supabase-call-recorder';
+import { fakeSupabase } from 'supabase-wiretap';
 import { approveEntry } from './approve';
 
 describe('approveEntry', () => {
@@ -214,7 +220,7 @@ return nothing to mean "no opinion", which is answered with
 `{ data: null, error: null }`.
 
 ```ts
-import { fakeSupabase, type Responder } from 'supabase-call-recorder';
+import { fakeSupabase, type Responder } from 'supabase-wiretap';
 
 const responder: Responder = (call) => {
   if (call.table === 'review_items') return { data: [{ id: 'r1' }], error: null };
@@ -488,7 +494,10 @@ per test is the whole point of the helper.
 ## FAQ
 
 **Do I need Supabase installed?**
-No. This has no dependencies at all, and does not import `@supabase/supabase-js`.
+No. The published package has no dependencies, runtime or peer, and imports
+nothing from `@supabase/supabase-js`. This repository does keep it as a
+devDependency, for one test file that type-checks realistic call chains against
+the genuine client types. None of that reaches the tarball.
 
 **Will it work with Jest?**
 The API will. The loading might need work, because this package is ESM only and
@@ -513,11 +522,24 @@ No. It is an independent package, not affiliated with or endorsed by Supabase.
 
 ### How it is tested
 
-The suite covers 100% of statements, branches, functions and lines, and the
-threshold is enforced in the Vitest config rather than checked by hand, so it
-cannot quietly slip. CI additionally packs the tarball, installs it into a clean
-directory and imports it, so "it builds" means the published artefact was
-actually loaded and run.
+Three layers, each answering something the others cannot.
+
+**The unit suite** covers 100% of statements, branches, functions and lines, and
+the threshold is enforced in the Vitest config rather than checked by hand, so it
+cannot quietly slip.
+
+**A compatibility suite** (`src/compat.test.ts`) writes the code a real project
+writes: functions typed with `SupabaseClient` from `@supabase/supabase-js`, so
+the compiler checks each call chain against the genuine API, and then runs them
+against the recorder. This is the layer that catches a builder method real code
+needs and this package is missing. The unit suite cannot: it calls the recorder
+directly, so it agrees with itself by construction. Deleting one method from
+`CHAIN_METHODS` leaves the typecheck green and makes this suite fail with
+`is not a function`, which is the behaviour it exists to guarantee.
+
+**CI packs the tarball**, installs it into a clean directory outside the project
+and imports it, so "it builds" means the published artefact was actually loaded
+and run.
 
 ## Contributing
 

@@ -11,7 +11,7 @@ Nothing yet.
 
 ## [0.1.0]
 
-First working version. Not published to npm.
+First working version.
 
 ### Added
 
@@ -32,5 +32,5 @@ First working version. Not published to npm.
 - `asClient<T>()`, so the cast to your client type lives at one call site.
 - Types for everything, and no runtime dependencies.
 
-[Unreleased]: https://github.com/damson/supabase-call-recorder/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/damson/supabase-call-recorder/releases/tag/v0.1.0
+[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/damson/supabase-wiretap/releases/tag/v0.1.0
