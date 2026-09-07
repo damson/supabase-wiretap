@@ -11,7 +11,7 @@ Nothing yet.
 
 ## [0.1.0]
 
-First working version. Not published to npm.
+First working version.
 
 ### Added
 
