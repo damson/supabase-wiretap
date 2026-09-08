@@ -119,32 +119,78 @@ jobs:
       - name: Publish
         run: npm publish --access public
 
-      # A green publish step is not the evidence. Trusted publishing is supposed
-      # to attach provenance without being asked, and the failure mode worth
-      # catching is a publish that succeeded WITHOUT it: the package is then live
-      # and unattested, which is quietly worse than before this change. So read
-      # it back off the registry and fail the release if it is not there.
+      # A green publish step is not the evidence. Trusted publishing attaches
+      # provenance without being asked, so the failure worth catching is a
+      # publish that SUCCEEDED and landed unattested: live package, green
+      # workflow, missing supply-chain link, and nothing saying so.
+      #
+      # The script owns this rather than a few lines of shell here, because the
+      # inline version failed the v0.1.1 release while the publish had worked:
+      # it waited 60 seconds against a read-through cache, and it could not tell
+      # "not visible yet" from "visible and unattested", so it announced the
+      # second. Its header carries the detail. It is runnable by hand, which is
+      # how its outcomes get exercised somewhere other than a release.
       - name: The published version carries provenance
         env:
-          REF_NAME: ${{ github.ref_name }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/release.yml
         run: |
           set -euo pipefail
+          node .github/scripts/verify-published-provenance.mjs \
+            "$(node -p "require('./package.json').name")" \
+            "$(node -p "require('./package.json').version")"
+
+  # Publishing to npm and publishing a GitHub Release are two different acts,
+  # and only the first one was automated. v0.1.1 reached the registry with its
+  # provenance intact and left the Releases tab announcing v0.1.0 as current,
+  # which every visitor read as the truth while nothing was red.
+  #
+  # It is a separate job so the publish keeps the narrowest token it can. The
+  # release needs `contents: write`, which the publish has no use for, and the
+  # publish needs `id-token: write`, which this has no use for.
+  github-release:
+    name: publish the GitHub Release
+    needs: publish
+    # An explicit `if:` REPLACES the implicit success() gate, so without the
+    # first clause this would publish a Release for a publish that failed.
+    if: success() && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Publish the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Idempotent on purpose: a re-run of a release that already published
+          # its Release should report that and stop, not fail the workflow and
+          # not open a second one.
+          if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Leaving it alone."
+            exit 0
+          fi
+
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
 
-          # The registry is read-through-cache; a fresh version can take a moment
-          # to appear on the metadata document.
-          for _ in $(seq 1 10); do
-            body="$(curl -sS "https://registry.npmjs.org/$name")"
-            found="$(printf '%s' "$body" | node -e "
-              let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
-                const v=(JSON.parse(s).versions||{})['$version'];
-                const a=v&&v.dist&&v.dist.attestations;
-                process.stdout.write(a?JSON.stringify(a):'');
-              })")"
-            [ -n "$found" ] && { echo "attestations: $found"; exit 0; }
-            sleep 6
-          done
+          # Fails when the changelog was never closed for this version, before
+          # anything is published rather than after.
+          node .github/scripts/release-notes.mjs "$version" > notes.md
+          {
+            printf '\n---\n\n'
+            printf 'On npm as [`%s@%s`](https://www.npmjs.com/package/%s/v/%s), ' \
+              "$name" "$version" "$name" "$version"
+            printf 'published from this tag by `.github/workflows/release.yml` over npm '
+            printf 'trusted publishing, with its provenance verified against the registry.\n'
+          } >> notes.md
 
-          echo "::error::$name@$version is on the registry with no attestations. The publish went through unattested, which is the one outcome this change must not produce."
-          exit 1
+          # --verify-tag publishes from the tag that is already there. Without
+          # it, a typo in the tag name creates a new one silently.
+          gh release create "$TAG" --repo "$REPO" --verify-tag \
+            --title "$TAG" --notes-file notes.md
