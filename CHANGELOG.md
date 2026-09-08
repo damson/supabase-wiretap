@@ -7,6 +7,13 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Releasing a tag now publishes the GitHub Release too, in a separate job with
+  only `contents: write`. Its body is the changelog section for the version, so
+  a release whose changelog was never closed fails before anything is published.
+  v0.1.1 reached npm and left the Releases tab announcing v0.1.0 as current.
+
 ### Fixed
 
 - The release's provenance check no longer fails a release that worked. It now
