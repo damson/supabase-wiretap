@@ -7,7 +7,28 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-Nothing yet.
+## [0.1.1] - 2026-09-08
+
+No change to the package. Every line below is about how the tarball reaches the
+registry, and the release exists so the new mechanism is exercised against the
+real registry rather than only in review: a green workflow is not evidence that
+a publish carried its provenance.
+
+### Changed
+
+- Releases publish over npm **trusted publishing**, not a stored token. The
+  `NPM_TOKEN` secret is gone, and with it a long-lived credential that anything
+  able to run a workflow in the `npm-publish` environment could have used.
+  Nothing about the package changes: this is how the tarball gets to the
+  registry, not what is in it.
+- Provenance is generated automatically by a trusted publish, so `--provenance`
+  came off both publish commands. The release now reads the attestation back off
+  the registry afterwards and fails if it is missing, because a publish that
+  succeeds unattested is the one outcome this change must not produce.
+- The release job moves to Node 24 and installs a current npm. Trusted
+  publishing needs npm 11.5.1 and Node 22.14.0, and Node 24.0.0 bundled npm
+  11.3.0, so the version the runner happens to carry is not something to trust.
+  The release guard now checks the npm version instead of checking for a token.
 
 ## [0.1.0]
 
@@ -32,5 +53,6 @@ First working version.
 - `asClient<T>()`, so the cast to your client type lives at one call site.
 - Types for everything, and no runtime dependencies.
 
-[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/damson/supabase-wiretap/releases/tag/v0.1.0
