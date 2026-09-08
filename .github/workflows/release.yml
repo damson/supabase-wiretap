@@ -3,19 +3,33 @@ name: Release
 # Publishes to npm from a tag, so the tarball on the registry comes from a
 # commit anyone can look at rather than from somebody's laptop.
 #
+# AUTHENTICATION IS npm TRUSTED PUBLISHING, over OIDC. No token is stored
+# anywhere. The workflow proves its own identity to the registry, and npm decides
+# whether to trust it from the publisher configured on the package: this
+# repository, this workflow file, this environment. All three have to match, so
+# moving or renaming any of them breaks the publish rather than quietly
+# widening who can do it.
+#
+# Two consequences that are easy to get wrong:
+#
+#   - Provenance is now AUTOMATIC and `--provenance` is gone. npm generates the
+#     attestation itself for a trusted publish, and passing the flag is not how
+#     you get one any more. What proves it worked is the registry, not a green
+#     run: read `versions.<v>.dist.attestations` back after publishing.
+#   - It has a version floor. Trusted publishing needs npm 11.5.1 and Node
+#     22.14.0; older npm does not know the mechanism, so it would fall back to
+#     looking for a token that no longer exists. The guard below pins the floor
+#     rather than trusting whatever npm the Node image happens to bundle.
+#
 # It cannot fire by accident. Three things have to be true first, and the guards
 # below say which one is missing rather than failing halfway through a publish:
 #
 #   1. `private: true` has to come out of package.json. It is there deliberately
 #      as a stop on publishing before the open decisions are settled.
-#   2. `NPM_TOKEN` has to exist as a repository secret, as a granular automation
-#      token rather than a classic one.
+#   2. The npm CLI has to be new enough to speak trusted publishing.
 #   3. The tag has to match the version in package.json, because a tag that
 #      claims one version while the tarball carries another is a supply-chain
 #      problem in slow motion.
-#
-# `--provenance` needs `id-token: write`. It makes npm show a verifiable link
-# from the published tarball back to this workflow run and this commit.
 
 on:
   push:
@@ -37,9 +51,18 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          # 22.14.0 is the floor trusted publishing states; 24 is the current
+          # line and clears it without sitting on the minimum.
+          node-version: '24'
           cache: npm
           registry-url: 'https://registry.npmjs.org'
+
+      # Explicit, rather than taking whatever npm the Node image bundles. Node
+      # 24.0.0 shipped npm 11.3.0, below the 11.5.1 floor, so which npm you get
+      # depends on the patch release the runner happens to have. The guard below
+      # checks the result rather than trusting this line.
+      - name: Use an npm that speaks trusted publishing
+        run: npm install -g npm@latest
 
       - run: npm ci --no-audit --no-fund
 
@@ -50,9 +73,9 @@ jobs:
 
       - name: Refuse a release the repository is not ready for
         env:
-          HAS_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
           REF_NAME: ${{ github.ref_name }}
           IS_TAG: ${{ github.ref_type == 'tag' }}
+          NPM_FLOOR: 11.5.1
         run: |
           set -euo pipefail
           fail=0
@@ -62,10 +85,20 @@ jobs:
             fail=1
           fi
 
-          if [ "$HAS_TOKEN" != "true" ]; then
-            echo '::error::NPM_TOKEN is not set on the npm-publish environment. Create a granular automation token on npm and add it there.'
+          # The token check this replaces asked whether a secret existed. There
+          # is no secret now, so the precondition that took its place is the one
+          # thing trusted publishing can still be missing at this point: an npm
+          # too old to speak it. Older npm does not error, it looks for a token,
+          # which is a confusing way to fail during a publish.
+          npm_version="$(npm --version)"
+          # The older of the two IS the floor exactly when npm is at or above it,
+          # equality included, because sorting two equal strings still yields it.
+          oldest="$(printf '%s\n%s\n' "$npm_version" "$NPM_FLOOR" | sort -V | head -1)"
+          if [ "$oldest" != "$NPM_FLOOR" ]; then
+            echo "::error::npm $npm_version cannot do trusted publishing; $NPM_FLOOR or later is required. The step above installs it, so this failing means that step did not take effect."
             fail=1
           fi
+          echo "npm $npm_version, floor $NPM_FLOOR."
 
           if [ "$IS_TAG" = "true" ]; then
             version="$(node -p "require('./package.json').version")"
@@ -81,11 +114,37 @@ jobs:
       # The last checkpoint that still costs nothing. A version published to the
       # registry cannot be replaced, only deprecated.
       - name: Dry run
-        run: npm publish --dry-run --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --dry-run --access public
 
       - name: Publish
-        run: npm publish --provenance --access public
+        run: npm publish --access public
+
+      # A green publish step is not the evidence. Trusted publishing is supposed
+      # to attach provenance without being asked, and the failure mode worth
+      # catching is a publish that succeeded WITHOUT it: the package is then live
+      # and unattested, which is quietly worse than before this change. So read
+      # it back off the registry and fail the release if it is not there.
+      - name: The published version carries provenance
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+
+          # The registry is read-through-cache; a fresh version can take a moment
+          # to appear on the metadata document.
+          for _ in $(seq 1 10); do
+            body="$(curl -sS "https://registry.npmjs.org/$name")"
+            found="$(printf '%s' "$body" | node -e "
+              let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{
+                const v=(JSON.parse(s).versions||{})['$version'];
+                const a=v&&v.dist&&v.dist.attestations;
+                process.stdout.write(a?JSON.stringify(a):'');
+              })")"
+            [ -n "$found" ] && { echo "attestations: $found"; exit 0; }
+            sleep 6
+          done
+
+          echo "::error::$name@$version is on the registry with no attestations. The publish went through unattested, which is the one outcome this change must not produce."
+          exit 1
