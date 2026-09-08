@@ -7,6 +7,20 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- The release's provenance check no longer fails a release that worked. It
+  waited 60 seconds against a read-through cache, and the `v0.1.1` release went
+  red while the publish had in fact succeeded with correct provenance. It also
+  could not distinguish "not visible on the registry yet" from "visible and
+  unattested", and reported the second, which is a false supply-chain alarm. It
+  now waits five minutes, asks the attestations endpoint directly, separates
+  those two outcomes into different exit codes and messages, and additionally
+  checks that the provenance names **this** repository and workflow rather than
+  merely existing. It moved out of the workflow into
+  `.github/scripts/verify-published-provenance.mjs` so it can be run by hand,
+  which is the only way its outcomes get exercised anywhere but a release.
+
 ## [0.1.1] - 2026-09-08
 
 No change to the package. Every line below is about how the tarball reaches the
