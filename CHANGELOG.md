@@ -7,6 +7,13 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-08
+
+No change to the package. Every line below is about how the tarball reaches the
+registry, and the release exists so the new mechanism is exercised against the
+real registry rather than only in review: a green workflow is not evidence that
+a publish carried its provenance.
+
 ### Changed
 
 - Releases publish over npm **trusted publishing**, not a stored token. The
@@ -46,5 +53,6 @@ First working version.
 - `asClient<T>()`, so the cast to your client type lives at one call site.
 - Types for everything, and no runtime dependencies.
 
-[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/damson/supabase-wiretap/releases/tag/v0.1.0
