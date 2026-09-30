@@ -13,6 +13,14 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
   only `contents: write`. Its body is the changelog section for the version, so
   a release whose changelog was never closed fails before anything is published.
   v0.1.1 reached npm and left the Releases tab announcing v0.1.0 as current.
+- The two release scripts are covered by the test suite, so `npm run verify`
+  checks them on every pull request. Until now their decisions were exercised
+  only by running them by hand, and the outcomes that matter are the ones a
+  release cannot rehearse: a live package that landed unattested, provenance
+  naming somewhere else, a changelog that was never closed. The provenance
+  check's exit codes and its poll loop are covered too, against a stub registry
+  that answers late on purpose, because reporting a still-propagating publish as
+  unattested is the specific way it failed before.
 
 ### Fixed
 
@@ -21,6 +29,10 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
   "on it and unattested", and checks the provenance names this repository and
   workflow. Moved to `.github/scripts/verify-published-provenance.mjs` so it can
   be run by hand.
+- A first release's GitHub Release body no longer carries the changelog's
+  link-reference definitions. The notes ran from a version's heading to the next
+  one, and the oldest section has nothing after it but that block, so the whole
+  of it was read as part of the body.
 
 ## [0.1.1] - 2026-09-08
 

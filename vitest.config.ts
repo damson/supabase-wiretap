@@ -3,7 +3,11 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // The release scripts live outside src because they are workflow steps, not
+    // part of the package. They are still the code with the least room to be
+    // wrong: a release runs them once and cannot rehearse the outcomes they
+    // exist to catch.
+    include: ['src/**/*.test.ts', '.github/scripts/*.test.mjs'],
     coverage: {
       provider: 'v8',
       reporter: ['text-summary', 'json-summary'],

@@ -28,16 +28,41 @@ export function sectionHeading(version) {
   return new RegExp(`^## \\[${escaped}\\](\\s|$)`);
 }
 
+/** Matches a link-reference definition: `[0.1.1]: https://...`. */
+const LINK_DEFINITION = /^\[[^\]]+\]:\s/;
+
+/**
+ * Where the file's footer of link-reference definitions starts: one past the
+ * last line that is neither blank nor a definition.
+ *
+ * The footer belongs to the FILE, not to any one section, so it is cut once
+ * here rather than by stopping a section at the first definition it meets. A
+ * definition an entry refers to sits INSIDE its section, and terminating there
+ * drops every entry below it from the Release body, silently and with exit 0.
+ */
+export function footerStart(lines) {
+  let end = lines.length;
+  while (end > 0) {
+    const line = lines[end - 1].trim();
+    if (line === '' || LINK_DEFINITION.test(line)) end -= 1;
+    else break;
+  }
+  return end;
+}
+
 /**
  * The lines of one version's section, from its heading to the next `## `
- * heading or the end of the file, with the heading itself dropped.
+ * heading or the end of the content, with the heading itself dropped.
  *
- * Link-reference definitions (`[0.1.1]: https://...`) sit below every section,
- * so they fall outside the range by construction rather than by filtering.
+ * The footer is cut before the search, which is what keeps the OLDEST section
+ * honest: nothing follows it but that block, so a project's first release would
+ * otherwise have shipped `[0.1.0]: https://...` in the body of its own GitHub
+ * Release.
  */
 export function extractSection(changelog, version) {
+  const all = changelog.split('\n');
+  const lines = all.slice(0, footerStart(all));
   const heading = sectionHeading(version);
-  const lines = changelog.split('\n');
   const start = lines.findIndex((line) => heading.test(line));
   if (start === -1) return null;
 
