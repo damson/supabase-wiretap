@@ -28,12 +28,20 @@ export function sectionHeading(version) {
   return new RegExp(`^## \\[${escaped}\\](\\s|$)`);
 }
 
+/** Matches a link-reference definition: `[0.1.1]: https://...`. */
+const LINK_DEFINITION = /^\[[^\]]+\]:\s/;
+
 /**
  * The lines of one version's section, from its heading to the next `## `
- * heading or the end of the file, with the heading itself dropped.
+ * heading, the link-reference definitions, or the end of the file, with the
+ * heading itself dropped.
  *
- * Link-reference definitions (`[0.1.1]: https://...`) sit below every section,
- * so they fall outside the range by construction rather than by filtering.
+ * Link-reference definitions sit in one block at the foot of the file, so for
+ * any version with an older section beneath it they already fall outside the
+ * range. The OLDEST section is the exception, because nothing follows it but
+ * that block, and a project's first release is exactly that case: it would
+ * otherwise have shipped `[0.1.0]: https://...` in the body of its own GitHub
+ * Release. Hence the explicit terminator rather than relying on position.
  */
 export function extractSection(changelog, version) {
   const heading = sectionHeading(version);
@@ -42,7 +50,7 @@ export function extractSection(changelog, version) {
   if (start === -1) return null;
 
   const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => line.startsWith('## '));
+  const end = rest.findIndex((line) => line.startsWith('## ') || LINK_DEFINITION.test(line));
   const body = (end === -1 ? rest : rest.slice(0, end)).join('\n').trim();
   return body === '' ? null : body;
 }
