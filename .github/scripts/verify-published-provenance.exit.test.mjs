@@ -19,6 +19,13 @@ const VERSION = '0.1.2';
 const REPO = 'damson/supabase-wiretap';
 const WORKFLOW = '.github/workflows/release.yml';
 
+// Matched exactly, both of them. A stub that answers any path under
+// `/attestations/` would let a regression in how the script builds the spec
+// pass every test here: it would ask for the wrong package and still be told
+// yes.
+const SPEC = `/-/npm/v1/attestations/${encodeURIComponent(NAME)}@${VERSION}`;
+const PACKUMENT = `/${encodeURIComponent(NAME)}`;
+
 const provenance = (repository, path) => ({
   attestations: [
     {
@@ -53,22 +60,30 @@ afterEach(async () => {
 /** Serves one scripted registry. `attestations` may be a function of the hit count. */
 async function registry({ attestations, packument }) {
   let hits = 0;
+  const unexpected = [];
   const server = createServer((req, res) => {
     const json = (code, body) => {
       res.writeHead(code, { 'content-type': 'application/json' });
       res.end(JSON.stringify(body ?? {}));
     };
-    if (req.url.startsWith('/-/npm/v1/attestations/')) {
+    if (req.url === SPEC) {
       hits += 1;
       const body = typeof attestations === 'function' ? attestations(hits) : attestations;
       return body ? json(200, body) : json(404, null);
     }
-    if (req.url === `/${NAME}`) return json(200, packument);
+    if (req.url === PACKUMENT) return json(200, packument);
+    // A path this test did not intend. Recorded rather than answered, so the
+    // tests can say so instead of timing out into a plausible exit 2.
+    unexpected.push(req.url);
     json(404, null);
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   open.push(server);
-  return { url: `http://127.0.0.1:${server.address().port}`, attestationHits: () => hits };
+  return {
+    url: `http://127.0.0.1:${server.address().port}`,
+    attestationHits: () => hits,
+    unexpected: () => [...unexpected],
+  };
 }
 
 function run(url, { args = [NAME, VERSION], window = '0.6', interval = '0.05', expected = true } = {}) {
@@ -95,6 +110,7 @@ describe('verify-published-provenance exit codes', () => {
     const { code, output } = await run(r.url);
     expect(code).toBe(0);
     expect(output).toContain('names the expected repository and workflow');
+    expect(r.unexpected()).toEqual([]);
   });
 
   it('exits 1 when the version is live and carries no provenance', async () => {
@@ -136,6 +152,7 @@ describe('verify-published-provenance exit codes', () => {
     expect(output).toContain('names the expected repository and workflow');
     // Proves it actually polled rather than passing on the first answer.
     expect(r.attestationHits()).toBeGreaterThanOrEqual(4);
+    expect(r.unexpected()).toEqual([]);
   });
 
   it('exits 2 on a usage error, which is unknown rather than a failed publish', async () => {
