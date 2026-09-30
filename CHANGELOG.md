@@ -10,9 +10,10 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Releasing a tag now publishes the GitHub Release too, in a separate job with
-  only `contents: write`. Its body is the changelog section for the version, so
-  a release whose changelog was never closed fails before anything is published.
-  v0.1.1 reached npm and left the Releases tab announcing v0.1.0 as current.
+  only `contents: write`. Its body is the changelog section for the version, and
+  the pre-publish gate reads that section as well, so a release whose changelog
+  was never closed is refused while refusing still costs nothing. v0.1.1 reached
+  npm and left the Releases tab announcing v0.1.0 as current.
 - The two release scripts are covered by the test suite, so `npm run verify`
   checks them on every pull request. Until now their decisions were exercised
   only by running them by hand, and the outcomes that matter are the ones a
@@ -20,7 +21,10 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
   naming somewhere else, a changelog that was never closed. The provenance
   check's exit codes and its poll loop are covered too, against a stub registry
   that answers late on purpose, because reporting a still-propagating publish as
-  unattested is the specific way it failed before.
+  unattested is the specific way it failed before. The release's step ORDER is
+  covered as well, which no test of a script can see: the changelog has to be
+  read before the publish, and a reader added after it would be the same bug
+  under a different name.
 
 ### Fixed
 
