@@ -32,25 +32,42 @@ export function sectionHeading(version) {
 const LINK_DEFINITION = /^\[[^\]]+\]:\s/;
 
 /**
- * The lines of one version's section, from its heading to the next `## `
- * heading, the link-reference definitions, or the end of the file, with the
- * heading itself dropped.
+ * Where the file's footer of link-reference definitions starts: one past the
+ * last line that is neither blank nor a definition.
  *
- * Link-reference definitions sit in one block at the foot of the file, so for
- * any version with an older section beneath it they already fall outside the
- * range. The OLDEST section is the exception, because nothing follows it but
- * that block, and a project's first release is exactly that case: it would
+ * The footer belongs to the FILE, not to any one section, so it is cut once
+ * here rather than by stopping a section at the first definition it meets. A
+ * definition an entry refers to sits INSIDE its section, and terminating there
+ * drops every entry below it from the Release body, silently and with exit 0.
+ */
+export function footerStart(lines) {
+  let end = lines.length;
+  while (end > 0) {
+    const line = lines[end - 1].trim();
+    if (line === '' || LINK_DEFINITION.test(line)) end -= 1;
+    else break;
+  }
+  return end;
+}
+
+/**
+ * The lines of one version's section, from its heading to the next `## `
+ * heading or the end of the content, with the heading itself dropped.
+ *
+ * The footer is cut before the search, which is what keeps the OLDEST section
+ * honest: nothing follows it but that block, so a project's first release would
  * otherwise have shipped `[0.1.0]: https://...` in the body of its own GitHub
- * Release. Hence the explicit terminator rather than relying on position.
+ * Release.
  */
 export function extractSection(changelog, version) {
+  const all = changelog.split('\n');
+  const lines = all.slice(0, footerStart(all));
   const heading = sectionHeading(version);
-  const lines = changelog.split('\n');
   const start = lines.findIndex((line) => heading.test(line));
   if (start === -1) return null;
 
   const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => line.startsWith('## ') || LINK_DEFINITION.test(line));
+  const end = rest.findIndex((line) => line.startsWith('## '));
   const body = (end === -1 ? rest : rest.slice(0, end)).join('\n').trim();
   return body === '' ? null : body;
 }

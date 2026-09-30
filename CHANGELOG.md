@@ -17,7 +17,10 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
   checks them on every pull request. Until now their decisions were exercised
   only by running them by hand, and the outcomes that matter are the ones a
   release cannot rehearse: a live package that landed unattested, provenance
-  naming somewhere else, a changelog that was never closed.
+  naming somewhere else, a changelog that was never closed. The provenance
+  check's exit codes and its poll loop are covered too, against a stub registry
+  that answers late on purpose, because reporting a still-propagating publish as
+  unattested is the specific way it failed before.
 
 ### Fixed
 

@@ -2,7 +2,7 @@
 // rehearsed there, so their decisions are pinned here instead.
 
 import { describe, expect, it } from 'vitest';
-import { extractSection, sectionHeading } from './release-notes.mjs';
+import { extractSection, footerStart, sectionHeading } from './release-notes.mjs';
 
 const CHANGELOG = [
   '# Changelog',
@@ -65,6 +65,29 @@ describe('extractSection', () => {
     expect(extractSection(inline, '0.1.0')).toBe('- See [the docs](https://example.invalid).');
   });
 
+  it('keeps the entries below a definition an entry refers to', () => {
+    // The footer is a property of the file. Stopping at the first definition
+    // inside a section published only the first entry, with exit 0.
+    const mid = [
+      '## [0.3.0]',
+      '',
+      '- The first thing, see [#12].',
+      '',
+      '[#12]: https://example.invalid/issues/12',
+      '',
+      '- The second thing, which must not be dropped.',
+      '',
+      '## [0.2.0]',
+      '',
+      '- Older.',
+      '',
+      '[0.3.0]: https://example.invalid/compare/v0.2.0...v0.3.0',
+    ].join('\n');
+    expect(extractSection(mid, '0.3.0')).toContain('The second thing, which must not be dropped.');
+    expect(extractSection(mid, '0.3.0')).toContain('[#12]: https://example.invalid/issues/12');
+    expect(extractSection(mid, '0.3.0')).not.toContain('compare/v0.2.0');
+  });
+
   it('reports a heading with no content as absent, because an empty body is not notes', () => {
     const empty = ['## [0.3.0]', '', '## [0.2.0]', '', '- Real.'].join('\n');
     expect(extractSection(empty, '0.3.0')).toBeNull();
@@ -72,5 +95,22 @@ describe('extractSection', () => {
 
   it('reports a version with no heading at all as absent', () => {
     expect(extractSection(CHANGELOG, '9.9.9')).toBeNull();
+  });
+});
+
+describe('footerStart', () => {
+  it('cuts the trailing run of definitions and the blanks between them', () => {
+    const lines = ['- Real.', '', '[a]: https://x.invalid', '[b]: https://y.invalid', ''];
+    expect(footerStart(lines)).toBe(1);
+  });
+
+  it('cuts nothing when the file ends in content', () => {
+    const lines = ['[a]: https://x.invalid', '', '- Real.'];
+    expect(footerStart(lines)).toBe(3);
+  });
+
+  it('cuts everything when the file is nothing but a footer', () => {
+    expect(footerStart(['[a]: https://x.invalid', ''])).toBe(0);
+    expect(footerStart([])).toBe(0);
   });
 });

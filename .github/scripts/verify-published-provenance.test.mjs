@@ -1,6 +1,7 @@
 // What this check decides cannot be rehearsed during a release: the bad
 // outcomes need a registry that is lying or late. The pure decisions are pinned
-// here; the poll loop itself is exercised by running the script by hand.
+// here; the poll loop and the exit codes it reports through live in
+// `verify-published-provenance.exit.test.mjs`, over a stub registry.
 
 import { describe, expect, it } from 'vitest';
 import { buildSource, matchesExpected, slsaStatement } from './verify-published-provenance.mjs';
