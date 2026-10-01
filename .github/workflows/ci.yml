@@ -27,10 +27,16 @@ jobs:
       # the rest.
       fail-fast: false
       matrix:
-        # The floor declared in package.json `engines`, plus the versions people
-        # actually run. A package that claims Node 20 and is only ever tested on
-        # the newest release is claiming something nobody checked.
-        node: ['20', '22', '24']
+        # The DEVELOPMENT floor, which is not the published one. The package
+        # ships no runtime dependencies and supports Node 20 for the people who
+        # install it; the toolchain that builds and tests it does not, because
+        # `@supabase/supabase-js` requires `>=22.0.0` and the test runner has
+        # since joined it. Running the suite under a Node its own runner says it
+        # does not support buys a green tick and no information.
+        #
+        # The published floor is proved by `the tarball installs and imports`,
+        # which installs nothing but the tarball, exactly as a consumer does.
+        node: ['22', '24']
     steps:
       - uses: actions/checkout@v7
 
@@ -50,8 +56,12 @@ jobs:
       - name: Build
         run: npm run build
 
-  package:
-    name: the tarball installs and imports
+  # Packing needs the toolchain, so it runs on the development floor. Consuming
+  # the result must not, which is why it is a separate job: a consumer installs
+  # the tarball and nothing else, and the old single job proved the published
+  # floor by installing the whole devDependency tree on it.
+  pack:
+    name: pack the tarball
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -59,22 +69,56 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
 
       - run: npm ci --no-audit --no-fund
 
-      # "It compiles" is not the same claim as "somebody could install this and
-      # use it". The only way to make the second claim is to install the
-      # artefact from outside the project and run it.
-      - name: Pack, install elsewhere, and use it
+      - name: Pack
         run: |
           set -euo pipefail
           tarball="$(npm pack --silent)"
+          mkdir -p dist-tarball
+          mv "$tarball" dist-tarball/
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tarball
+          path: dist-tarball/*.tgz
+          retention-days: 1
+
+  package:
+    # The name is load-bearing: it is a required status check on both long-lived
+    # branches, and a required check that never runs blocks every pull request
+    # forever.
+    name: the tarball installs and imports
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The PUBLISHED floor from package.json `engines`, and no checkout: this
+      # job is standing in for somebody who has the package and not the
+      # repository. Nothing here installs a devDependency.
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tarball
+          path: /tmp/tarball
+
+      # "It compiles" is not the same claim as "somebody could install this and
+      # use it". The only way to make the second claim is to install the
+      # artefact from outside the project and run it.
+      - name: Install elsewhere, and use it
+        run: |
+          set -euo pipefail
+          tarball="$(ls /tmp/tarball/*.tgz)"
           mkdir -p /tmp/consumer
           cd /tmp/consumer
           printf '{"name":"consumer","private":true,"type":"module","version":"1.0.0"}\n' > package.json
-          npm install --no-audit --no-fund "$GITHUB_WORKSPACE/$tarball"
+          npm install --no-audit --no-fund "$tarball"
           cat > smoke.mjs <<'EOF'
           import assert from 'node:assert/strict';
           import { fakeSupabase, CHAIN_METHODS } from 'supabase-wiretap';
