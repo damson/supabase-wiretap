@@ -21,7 +21,7 @@ name: Release
 #     looking for a token that no longer exists. The guard below pins the floor
 #     rather than trusting whatever npm the Node image happens to bundle.
 #
-# It cannot fire by accident. Three things have to be true first, and the guards
+# It cannot fire by accident. Four things have to be true first, and the guards
 # below say which one is missing rather than failing halfway through a publish:
 #
 #   1. `private: true` has to come out of package.json. It is there deliberately
@@ -30,6 +30,9 @@ name: Release
 #   3. The tag has to match the version in package.json, because a tag that
 #      claims one version while the tarball carries another is a supply-chain
 #      problem in slow motion.
+#   4. The changelog has to be closed for the version. The Release body comes
+#      from it, and the job that reads it runs after the publish, so it is read
+#      in the gate too: past the publish, this costs a version number.
 
 on:
   push:
@@ -100,12 +103,28 @@ jobs:
           fi
           echo "npm $npm_version, floor $NPM_FLOOR."
 
+          version="$(node -p "require('./package.json').version")"
+
           if [ "$IS_TAG" = "true" ]; then
-            version="$(node -p "require('./package.json').version")"
             if [ "$REF_NAME" != "v$version" ]; then
               echo "::error::Tag $REF_NAME does not match package.json version $version. Publishing them out of step is a supply-chain problem in slow motion."
               fail=1
             fi
+          fi
+
+          # The GitHub Release body is this version's changelog section, and the
+          # job that reads it runs AFTER the publish, because it needs this one.
+          # So an unclosed changelog used to be discovered on the far side of the
+          # irreversible step: the version live on npm, the workflow red, no
+          # Release, and nothing that can be taken back. Reading it here is the
+          # difference between a refusal that costs nothing and one that costs a
+          # version number.
+          #
+          # The same script the Release job runs, so the two cannot disagree
+          # about what counts as closed.
+          if ! message="$(node .github/scripts/release-notes.mjs "$version" 2>&1 >/dev/null)"; then
+            echo "::error::$message"
+            fail=1
           fi
 
           [ "$fail" -eq 0 ] || exit 1
@@ -179,8 +198,9 @@ jobs:
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
 
-          # Fails when the changelog was never closed for this version, before
-          # anything is published rather than after.
+          # The pre-publish gate already refused a release whose changelog was
+          # never closed, so failing here means the changelog changed between
+          # the two jobs. This call produces the body; it does not decide it.
           node .github/scripts/release-notes.mjs "$version" > notes.md
           {
             printf '\n---\n\n'
