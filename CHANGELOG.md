@@ -9,6 +9,16 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The Node floor the package publishes and the Node floor it is developed on are
+  now separate numbers, and each is proved by the thing it is about. The
+  published floor stays at 20: a job installs the packed tarball on Node 20 with
+  none of this repository's tooling present, which is what a person installing
+  the package actually does. The development floor is 22, because
+  `@supabase/supabase-js` requires it and the test runner does too, and the test
+  matrix had been running Node 20 against them while npm reduced the mismatch to
+  a warning. A test now fails when any devDependency declares a Node the matrix
+  does not run.
+
 - Releasing a tag now publishes the GitHub Release too, in a separate job with
   only `contents: write`. Its body is the changelog section for the version, and
   the pre-publish gate reads that section as well, so a release whose changelog
