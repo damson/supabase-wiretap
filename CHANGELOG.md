@@ -7,6 +7,16 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-04
+
+No change to the package. Every line below is about how it reaches the registry
+and how that is checked, and the release exists to exercise the publish path
+against the real registry. That path has been rebuilt five times since v0.1.1,
+whose release went red on a false alarm having published correctly, and none of
+the rebuilt parts has run since: the pre-publish changelog gate, the provenance
+read-back, the GitHub Release job and the notes reader all run here together for
+the first time.
+
 ### Added
 
 - The Node floor the package publishes and the Node floor it is developed on are
@@ -82,6 +92,7 @@ First working version.
 - `asClient<T>()`, so the cast to your client type lives at one call site.
 - Types for everything, and no runtime dependencies.
 
-[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/damson/supabase-wiretap/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/damson/supabase-wiretap/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/damson/supabase-wiretap/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/damson/supabase-wiretap/releases/tag/v0.1.0
