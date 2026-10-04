@@ -7,7 +7,14 @@ something is worth raising, it is.
 
 ## Getting set up
 
-Three commands, and you need nothing beyond Node 20 or newer.
+Three commands, and you need nothing beyond Node 22 or newer.
+
+Node 22 is the floor for working ON the package, not for using it. What the
+package itself needs is Node 20, which is what `engines` says and what the
+`the tarball installs and imports` job proves on every pull request. The
+development floor is higher because `@supabase/supabase-js` and the test runner
+both require 22, and running the suite under a Node they do not support reports
+a green tick and nothing else.
 
 ```sh
 git clone https://github.com/damson/supabase-wiretap.git

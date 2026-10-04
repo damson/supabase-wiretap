@@ -88,6 +88,12 @@ setup, no dependencies, and it works with whichever test runner you already use.
 Node 20 or newer, and ESM only: there is no CommonJS build, so a test runner that
 cannot `import` an ES module cannot load this.
 
+That is the floor for using the package, and it is checked rather than asserted:
+a job on every pull request installs the packed tarball on Node 20, with none of
+this repository's own tooling present, and uses it. Contributing to the package
+needs Node 22, for reasons that are nothing to do with the package itself and
+are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
 Nothing in it is tied to a particular runner. It is a plain function returning a
 plain object, so Vitest and `node:test` use it as is. Jest needs its own ESM
 support turned on, which is a Jest configuration matter rather than anything this
