@@ -11,23 +11,19 @@
 
 **Test the code that talks to your Supabase database, without a database.**
 
-You give it the answers your test wants. It gives you back a list of everything
-your code asked for, so you can check that the right row was written, with the
-right values, to the right table.
+You decide what the database answers. Your code runs against a recorder.
+Then you check what your code asked for: which table, which filters, which rows
+it tried to write.
 
-No container to start. No fixtures to reset. Tests run in milliseconds.
-
-The name is the design. A tap sits on the line, writes down everything that goes
-past, and changes none of it. This is not a database and
-[deliberately cannot become one](#the-idea-behind-it).
+No container, no fixtures, no cleanup. Tests run in milliseconds.
 
 ```ts
 import { fakeSupabase } from 'supabase-wiretap';
 
-// 1. Decide what the database "says" back.
+// 1. Decide what the database answers.
 const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
 
-// 2. Run your code against it.
+// 2. Run your code against the recorder.
 await approveEntry('e1', fake.asClient<SupabaseClient>());
 
 // 3. Check what your code tried to do.
@@ -35,72 +31,27 @@ expect(fake.writes('entries', 'insert')).toEqual([{ lemma: 'kaz', approved: true
 expect(fake.touched('audit_log')).toBe(true);
 ```
 
-New here? Jump to [Your first test](#your-first-test). It assumes nothing.
-
----
-
 ## Contents
 
-- [Why you might want this](#why-you-might-want-this)
 - [Requirements](#requirements)
 - [Install](#install)
 - [Your first test](#your-first-test)
 - [The idea behind it](#the-idea-behind-it)
-- [Cookbook](#cookbook)
+- [Recipes](#recipes)
 - [API reference](#api-reference)
 - [TypeScript](#typescript)
-- [What it deliberately does not do](#what-it-deliberately-does-not-do)
+- [Limits](#limits)
 - [FAQ](#faq)
 - [Contributing](#contributing)
-- [Licence](#licence)
-
-## Why you might want this
-
-If your project uses Supabase, there is probably a layer of code that reads and
-writes rows: server actions, route handlers, background jobs. It is often the
-least tested code in the whole repository, and usually for one reason. Testing it
-seems to need a database.
-
-Here is what changes when it does not.
-
-**Your tests get fast.** No container to boot, no schema to load, no rows to
-clean up between cases. Every example in this README runs in under a
-millisecond.
-
-**You can test the failure paths.** The interesting cases are the ones that are
-awkward to arrange for real: the network drops, the row is missing, permission is
-denied, the storage bucket is gone. Here each of them is one line.
-
-**You assert on the decision, not the round trip.** "Did it write the reviewer's
-id onto the entry?" is a question about your code. It does not need Postgres to
-answer, and answering it against Postgres mostly tests Postgres.
-
-**You can assert that something did NOT happen.** When your validation rejects a
-submission, nothing is written anywhere, so there is no row to look for. Being
-able to say "this table was never touched" turns an untestable guarantee into a
-one-line check.
-
-**It stays out of your way.** One function, no configuration file, no global
-setup, no dependencies, and it works with whichever test runner you already use.
 
 ## Requirements
 
-Node 20 or newer, and ESM only: there is no CommonJS build, so a test runner that
-cannot `import` an ES module cannot load this.
-
-That is the floor for using the package, and it is checked rather than asserted:
-a job on every pull request installs the packed tarball on Node 20, with none of
-this repository's own tooling present, and uses it. Contributing to the package
-needs Node 22, for reasons that are nothing to do with the package itself and
-are in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Nothing in it is tied to a particular runner. It is a plain function returning a
-plain object, so Vitest and `node:test` use it as is. Jest needs its own ESM
-support turned on, which is a Jest configuration matter rather than anything this
-package can fix.
-
-You do not need `@supabase/supabase-js` installed for this to work. It is not a
-dependency, and not a peer dependency.
+- **Node 20 or newer.**
+- **ESM only.** There is no CommonJS build.
+- **Any test runner** that can `import` an ES module. Vitest and `node:test`
+  work as is. Jest needs its ESM support turned on.
+- **No Supabase install needed.** `@supabase/supabase-js` is not a dependency,
+  not even a peer one.
 
 ## Install
 
@@ -110,8 +61,7 @@ npm install --save-dev supabase-wiretap
 
 ## Your first test
 
-Say you have a function that approves an entry. It writes a row and updates
-another one.
+Here is a function that loads an item, writes a row, and updates another row:
 
 ```ts
 // src/approve.ts
@@ -124,37 +74,7 @@ export async function approveEntry(id: string, client: SupabaseClient) {
 }
 ```
 
-A test for it, step by step.
-
-**Step 1: make a recorder, and tell it what to answer.**
-
-The function you pass is called for every query. It receives the call, and
-returns what the database should reply with.
-
-```ts
-import { fakeSupabase } from 'supabase-wiretap';
-
-const fake = fakeSupabase(() => ({ data: { lemma: 'kaz' }, error: null }));
-```
-
-**Step 2: run your code against `fake.asClient()`.**
-
-```ts
-await approveEntry('r1', fake.asClient<SupabaseClient>());
-```
-
-`asClient<T>()` hands you the recorder typed as whatever your function expects.
-There is more on that in [TypeScript](#typescript), and you can ignore it
-entirely if you are not using TypeScript.
-
-**Step 3: check what your code did.**
-
-```ts
-expect(fake.writes('entries', 'insert')).toEqual([{ lemma: 'kaz', approved: true }]);
-expect(fake.writes('review_items', 'update')).toEqual([{ status: 'approved' }]);
-```
-
-That is a complete test. Put together:
+And a test for it, with one success case and one failure case:
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -163,6 +83,7 @@ import { approveEntry } from './approve';
 
 describe('approveEntry', () => {
   it('writes the entry and marks the review item approved', async () => {
+    // Every query gets this answer.
     const fake = fakeSupabase(() => ({ data: { lemma: 'kaz' }, error: null }));
 
     await approveEntry('r1', fake.asClient<SupabaseClient>());
@@ -171,59 +92,43 @@ describe('approveEntry', () => {
     expect(fake.writes('review_items', 'update')).toEqual([{ status: 'approved' }]);
   });
 
-  it('gives up when the item cannot be loaded', async () => {
+  it('writes nothing when the item cannot be loaded', async () => {
     const fake = fakeSupabase(() => ({ data: null, error: { message: 'not found' } }));
 
     await expect(approveEntry('r1', fake.asClient<SupabaseClient>())).rejects.toThrow();
-
-    // Nothing was written. There is no row to go looking for, so this is the
-    // only way to state it.
     expect(fake.touched('entries')).toBe(false);
   });
 });
 ```
 
+Three things to know:
+
+1. The function you pass to `fakeSupabase` is the **responder**. It is called
+   once per query and returns what the database would reply.
+2. `fake.asClient<T>()` gives you the recorder typed as your real client. See
+   [TypeScript](#typescript).
+3. `writes()` and `touched()` tell you what your code did.
+
 ## The idea behind it
 
-There is a fork in the road when you write a test double for a database, and
-this package takes the less obvious branch on purpose.
+This package records calls. It never acts like a database.
 
-The tempting branch is to build something that behaves like a small database:
-keep the rows you insert in a Map, and answer `select` out of them. It feels
-right, and it works for about a week. Then it has to grow filters. Then operator
-precedence on those filters. Then ordering, then null sorting, then the count
-modes, then joined selects like `select('*, meanings(*)')`.
+A fake that stores rows and answers queries from them has to guess how Postgres
+filters, sorts and joins. When it guesses wrong, your test still passes, because
+your code and your fake agree with each other. You end up maintaining a second,
+less correct database.
 
-Every one of those additions is a guess about what PostgREST and Postgres would
-have done. When the guess is right, your test passes and confirms something you
-already believed. When the guess is wrong, **your test still passes**, because
-your code and your fake agree with each other while both of them disagree with
-the real database. You now maintain a second, less correct database whose only
-user is your test suite.
+So this one stores nothing. You test the decisions your code makes: the row it
+writes, the filter it uses, the write it skips when validation fails.
 
-So this one does not store anything and cannot be queried back. It records what
-your code asked for, and answers from the function you gave it.
+It cannot tell you whether a column exists or a constraint would reject a row.
+Keep a smaller suite that runs against a real database for those questions.
 
-What that leaves you asserting on is the part that is actually yours: the row
-that would reach `entries`, the filter that would scope the read, the audit
-record that would be written alongside it, and the write that must not happen
-when validation fails. Those are decisions your code makes. They are worth
-testing, and none of them needs a database to be true.
+## Recipes
 
-What it cannot tell you is whether a column name is real, whether your SQL means
-what you think, or whether a constraint would reject the row. Nothing that runs
-without Postgres can tell you that, and a double that appears to is the problem
-rather than the solution. Keep one slower suite, or one CI job, that runs against
-a real database and owns those questions. This owns the rest, which is most of
-them.
+### Answer different tables differently
 
-## Cookbook
-
-### The responder: one function answers everything
-
-The responder is called once per query, with the call. Return an answer, or
-return nothing to mean "no opinion", which is answered with
-`{ data: null, error: null }`.
+Return `undefined` for "no opinion". That answers `{ data: null, error: null }`.
 
 ```ts
 import { fakeSupabase, type Responder } from 'supabase-wiretap';
@@ -231,13 +136,13 @@ import { fakeSupabase, type Responder } from 'supabase-wiretap';
 const responder: Responder = (call) => {
   if (call.table === 'review_items') return { data: [{ id: 'r1' }], error: null };
   if (call.table === 'profiles') return { data: null, error: { message: 'denied' } };
-  return undefined; // everything else answers with nothing, and that is fine
+  return undefined;
 };
 
 const fake = fakeSupabase(responder);
 ```
 
-Because the responder sees the whole call, it can answer on the filters too:
+### Answer based on the filters
 
 ```ts
 const responder: Responder = (call) =>
@@ -246,82 +151,56 @@ const responder: Responder = (call) =>
     : { data: [], error: null };
 ```
 
-Need different answers in sequence? A closure is enough:
+### Give answers in sequence
 
 ```ts
 const answers = [{ data: [{ id: 'r1' }], error: null }, { data: [], error: null }];
 const fake = fakeSupabase(() => answers.shift());
 ```
 
-### Asserting on the query itself
+### Check the query itself
 
-Every awaited query is recorded in `fake.calls`, in the order it resolved, with
-the chain in the order it was built.
+`fake.calls` lists every awaited query, in order. Each one has its `table` and
+its chain of `ops`, in the order they were built. A query is recorded when it is
+awaited.
 
 ```ts
 await nextPendingId(fake.asClient<SupabaseClient>(), { sort: 'score', excludeId: 'r1' });
 
 expect(fake.calls[0].table).toBe('review_queue');
 expect(fake.calls[0].ops).toContainEqual(['neq', 'id', 'r1']);
-expect(fake.calls[0].ops.filter(([op]) => op === 'order').map(([, col]) => col)).toEqual([
-  'confidence_score',
-  'created_at',
-]);
 ```
 
-That last assertion says "it orders by score, then breaks ties on `created_at`",
-which is the kind of thing that is usually written as a comment and then quietly
-stops being true.
+### Test errors and dropped connections
 
-Nothing is recorded until the chain is awaited, which is also when PostgREST
-actually issues the request.
-
-### When the connection drops
-
-Supabase reports a query error by filling in `error`, and reports a dropped
-connection by rejecting the promise. Those are two different paths through your
-code, and most test suites can only ever reach the first one.
-
-A responder that throws gives you the second:
+Supabase has two failure paths, and your code handles them differently:
 
 ```ts
-it('shows the outage banner instead of an empty queue', async () => {
-  const fake = fakeSupabase(() => {
-    throw new Error('fetch failed');
-  });
+// A query error: the promise resolves with `error` filled in.
+const denied = fakeSupabase(() => ({ data: null, error: { message: 'permission denied' } }));
 
-  await expect(loadQueue(fake.asClient<SupabaseClient>())).resolves.toEqual({ outage: true });
+// A dropped connection: the promise rejects.
+const offline = fakeSupabase(() => {
+  throw new Error('fetch failed');
 });
 ```
 
-A responder that returns an error gives you the first:
+The call is recorded in both cases.
 
-```ts
-const fake = fakeSupabase(() => ({ data: null, error: { message: 'permission denied' } }));
-```
+### Count rows
 
-The call is recorded either way, so "it did try" still holds on the failing path.
-
-### Counting rows
-
-A count query is `select('id', { count: 'exact', head: true })`. It returns no
-rows at all, and the number arrives beside them, so an answer can carry `count`:
+For `select('id', { count: 'exact', head: true })`, put the number in `count`:
 
 ```ts
 const fake = fakeSupabase((call) =>
   call.table === 'review_queue' ? { data: null, error: null, count: 544 } : undefined,
 );
-
-render(await QueuePage({ searchParams: {} }));
-expect(screen.getByText('544 waiting')).toBeVisible();
 ```
 
 ### Stored procedures (`rpc`)
 
-An `rpc` call is recorded like any other, under the table name `rpc:<function>`,
-with its arguments as the single operation. This matters most for role checks:
-you can answer one, or make it fail, without stubbing the helper that wraps it
-and losing the branch that reads the answer.
+An `rpc` call is recorded under the table name `rpc:<function>`. Its arguments
+follow `'rpc'` in its single operation.
 
 ```ts
 const fake = fakeSupabase((call) =>
@@ -332,66 +211,34 @@ await expect(requireAdmin(fake.asClient<SupabaseClient>())).rejects.toThrow('ins
 expect(fake.calls[0].ops).toEqual([['rpc']]);
 ```
 
-A throwing responder rejects the `rpc` too, so the connection-failure path is
-reachable there as well.
+### Prove nothing was written
 
-### `writes()` and `touched()`
-
-`writes(table, op)` gives you the payload of every write, in order. This is the
-assertion that earns its keep most often: not "the function returned true", but
-"this exact row would have reached the table".
+A rejected submission leaves no row to look for. `touched()` checks that the
+table was never reached:
 
 ```ts
-it('records the reviewer and the reason on the entry it writes', async () => {
-  const fake = fakeSupabase(() => ({ data: [{ id: 'e1' }], error: null }));
+await expect(submit({ lemma: 'kaz', origins: [] }, fake.asClient<SupabaseClient>())).rejects.toThrow();
 
-  await approve('r1', 'u-reviewer', fake.asClient<SupabaseClient>());
-
-  expect(fake.writes('entries', 'insert')).toEqual([
-    { lemma: 'kaz', origins: ['fr'], approved_by: 'u-reviewer' },
-  ]);
-  expect(fake.writes('review_items', 'update')).toEqual([{ status: 'approved' }]);
-});
-```
-
-`touched(table)` answers the negative, which is otherwise very hard to test. A
-rejected submission leaves no row anywhere, so the only evidence the guard held
-is that the table was never reached.
-
-```ts
-it('writes nothing at all when the origin list is empty', async () => {
-  const fake = fakeSupabase(() => ({ data: null, error: null }));
-
-  await expect(
-    submit({ lemma: 'kaz', origins: [] }, fake.asClient<SupabaseClient>()),
-  ).rejects.toThrow();
-
-  expect(fake.touched('entries')).toBe(false);
-  expect(fake.touched('entry_revisions')).toBe(false);
-});
+expect(fake.touched('entries')).toBe(false);
 ```
 
 ### Storage uploads
 
-Uploads are recorded, and the whole bucket can be made to fail so the code that
-runs when the object is not there becomes reachable:
+Uploads are recorded. Pass a storage error to make every upload fail:
 
 ```ts
 const ok = fakeSupabase();
 await handleUpload(file, ok.asClient<SupabaseClient>());
 expect(ok.uploads).toEqual([{ bucket: 'imports', path: 'batch/1.csv', contentType: 'text/csv' }]);
 
-const broken = fakeSupabase(undefined, { message: 'bucket not found' });
-await expect(handleUpload(file, broken.asClient<SupabaseClient>())).resolves.toEqual({
-  saved: false,
-});
+const broken = fakeSupabase({ storageError: { message: 'bucket not found' } });
+await handleUpload(file, broken.asClient<SupabaseClient>());
 expect(broken.uploads).toEqual([]);
 ```
 
 ### Listing accounts (`auth.admin.listUsers`)
 
-Handed one page per call, so you can describe a short page, a full page at the
-ceiling, or a failure, without knowing how your code walks the pager:
+The lister returns one page per call:
 
 ```ts
 const fullThenShort: AccountLister = (page, perPage) =>
@@ -399,80 +246,69 @@ const fullThenShort: AccountLister = (page, perPage) =>
     ? { users: Array.from({ length: perPage }, (_, i) => ({ id: `u${i}` })) }
     : { users: [{ id: 'last' }] };
 
-const fake = fakeSupabase(undefined, null, fullThenShort);
+const fake = fakeSupabase({ lister: fullThenShort });
 await collectAccounts(fake.asClient<SupabaseClient>());
 expect(fake.listedPages).toEqual([1, 2]);
 ```
 
 ## API reference
 
-### `fakeSupabase(responder?, storageError?, lister?)`
+### `fakeSupabase(options?)`
 
-Also accepts a single options object, which reads better when you only care about
-one of them:
+All options are optional. `fakeSupabase()` answers every query with
+`{ data: null, error: null }`.
 
-```ts
-const fake = fakeSupabase({ lister: myLister });
-```
-
-Everything is optional. `fakeSupabase()` answers every query with
-`{ data: null, error: null }`, which is often all you need from the tables your
-test does not care about.
-
-| Argument | Type | What it does |
+| Option | Type | What it does |
 |---|---|---|
-| `responder` | `(call) => Answer \| undefined` | Answers every query and `rpc`. Return `undefined` for "no opinion". Throw to simulate a dropped connection. |
-| `storageError` | `{ message } \| null` | When set, every upload fails with it and none are recorded. |
+| `responder` | `(call) => Answer \| undefined` | Answers every query and `rpc`. Throw to simulate a dropped connection. |
+| `storageError` | `{ message } \| null` | Every upload fails with this error, and none is recorded. |
 | `lister` | `(page, perPage) => AccountPage` | Backs `auth.admin.listUsers`, one page per call. |
 
-### What comes back
+The positional form `fakeSupabase(responder, storageError, lister)` also works.
+
+### What it returns
 
 | Field | Type | What it holds |
 |---|---|---|
 | `client` | object | The recorder. Pass it where the real client goes. |
-| `asClient<T>()` | `() => T` | The same object, typed as whatever your code expects. |
-| `calls` | `Call[]` | Every awaited query, in resolution order. |
+| `asClient<T>()` | `() => T` | The same object, typed as `T`. |
+| `calls` | `Call[]` | Every awaited query, in order. |
 | `writes(table, op)` | `unknown[]` | The payload of each `insert`, `upsert`, `update` or `delete` on `table`. |
-| `touched(table)` | `boolean` | Whether `table` was reached at all. |
+| `touched(table)` | `boolean` | Whether `table` was queried at all. |
 | `uploads` | `Upload[]` | Every accepted storage upload. |
-| `listedPages` | `number[]` | Which `listUsers` pages were requested, in order. |
+| `listedPages` | `number[]` | The `listUsers` pages requested, in order. |
 
-### `Call`
+### Types
 
 ```ts
 interface Call {
   table: string;                    // the table, or `rpc:<function>`
   ops: [string, ...unknown[]][];    // the chain, in the order it was built
 }
-```
 
-### `Answer`
-
-```ts
 interface Answer {
   data: unknown;
   error: unknown;
-  count?: number | null;   // for head queries
+  count?: number | null;            // for count queries
 }
 ```
 
-### Which builder methods are recorded
+### Recorded builder methods
 
 `select` `insert` `upsert` `update` `delete` `eq` `neq` `gt` `gte` `lt` `lte`
 `like` `ilike` `is` `in` `contains` `containedBy` `overlaps` `match` `not` `or`
 `filter` `order` `limit` `range` `single` `maybeSingle` `returns`
 
-Exported as `CHAIN_METHODS`. A method that is not on the list does not exist on
-the recorder, so calling it fails loudly rather than being silently dropped. That
-is on purpose. If you need one that is missing, it is a one-word change plus a
-test, and a [pull request](CONTRIBUTING.md) is very welcome.
+The list is exported as `CHAIN_METHODS`. Calling a method that is not on it
+throws, so a missing method cannot make a test pass by accident. Need one?
+Adding it is a one-line change: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## TypeScript
 
-Types ship with the package, so there is nothing to install alongside it.
+Types ship with the package.
 
-`client` is typed as the subset this actually implements, which is deliberately
-not `SupabaseClient`. Use `asClient<T>()` at the boundary:
+`client` is typed as the part of the client this package implements, not as
+`SupabaseClient`. Use `asClient<T>()` where you pass it to your code:
 
 ```ts
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -480,81 +316,52 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 await myServerAction(fake.asClient<SupabaseClient>());
 ```
 
-It is a cast, and it is honest about being one. This records part of the client
-surface, and the cast is where you accept that. Keeping it to a single call site
-per test is the whole point of the helper.
+This is a type cast. Keeping it in one place per test makes that easy to see.
 
-## What it deliberately does not do
+## Limits
 
-- **No query semantics.** Filters are recorded, never applied. `eq` does not
-  narrow anything, because there is nothing to narrow.
-- **No stored rows.** Nothing you insert can be selected back. A test that needs
-  that is really testing the database, and belongs in the suite that has one.
-- **No realtime, no edge functions, no `storage.download` or `remove`.** They are
-  absent rather than stubbed, so a gap shows up as a missing method instead of as
-  a silent success.
-- **No assertion helpers beyond `writes` and `touched`.** `calls` is a plain
-  array, and your test framework already has better matchers than anything that
-  could ship here.
+These are deliberate:
+
+- **Filters are recorded, never applied.** `eq` narrows nothing.
+- **Nothing is stored.** You cannot select back what you inserted.
+- **Not covered:** realtime, edge functions, `storage.download` and
+  `storage.remove`. They are missing rather than stubbed, so using one fails
+  loudly instead of passing silently.
+- **Only two assertion helpers**, `writes` and `touched`. `calls` is a plain
+  array, so your test runner's matchers work on it.
 
 ## FAQ
 
-**Do I need Supabase installed?**
-No. The published package has no dependencies, runtime or peer, and imports
-nothing from `@supabase/supabase-js`. This repository does keep it as a
-devDependency, for one test file that type-checks realistic call chains against
-the genuine client types. None of that reaches the tarball.
+**Can I check that a query was not made?**
+Yes: `touched(table)`. For finer checks, use `some`, `filter` or `find` on
+`calls`.
 
-**Will it work with Jest?**
-The API will. The loading might need work, because this package is ESM only and
-Jest needs its ESM support enabled. Vitest and `node:test` need nothing.
+**How do I simulate a timeout?**
+Throw in the responder: your code sees a rejected promise. For a real delay,
+use your test runner's fake timers.
 
-**My code calls a method that is not recorded and the test explodes.**
-That is the intended behaviour rather than a bug: silently dropping a call would
-make your test pass for the wrong reason. Open an issue, or add the method to
-`CHAIN_METHODS` and send a pull request.
-
-**Can I check that a query was NOT made?**
-Yes, that is what `touched(table)` is for. For something finer, `calls` is a
-plain array and `some`, `filter` and `find` all work on it.
-
-**How do I simulate a slow query or a timeout?**
-Return a rejected promise from the code under test's perspective by throwing in
-the responder. For an actual delay, wrap the call site in your runner's fake
-timers. This package is synchronous by design.
+**My code calls a method that is not recorded, and the test throws.**
+That is intended. Open an issue, or add the method to `CHAIN_METHODS` and send a
+pull request.
 
 **Is this an official Supabase project?**
-No. It is an independent package, not affiliated with or endorsed by Supabase.
+No. It is independent, and not affiliated with or endorsed by Supabase.
 
-### How it is tested
+## How it is tested
 
-Three layers, each answering something the others cannot.
-
-**The unit suite** covers 100% of statements, branches, functions and lines, and
-the threshold is enforced in the Vitest config rather than checked by hand, so it
-cannot quietly slip.
-
-**A compatibility suite** (`src/compat.test.ts`) writes the code a real project
-writes: functions typed with `SupabaseClient` from `@supabase/supabase-js`, so
-the compiler checks each call chain against the genuine API, and then runs them
-against the recorder. This is the layer that catches a builder method real code
-needs and this package is missing. The unit suite cannot: it calls the recorder
-directly, so it agrees with itself by construction. Deleting one method from
-`CHAIN_METHODS` leaves the typecheck green and makes this suite fail with
-`is not a function`, which is the behaviour it exists to guarantee.
-
-**CI packs the tarball**, installs it into a clean directory outside the project
-and imports it, so "it builds" means the published artefact was actually loaded
-and run.
+- **Unit tests** cover 100% of statements, branches, functions and lines. The
+  Vitest config enforces the threshold.
+- **A compatibility suite** (`src/compat.test.ts`) types its code against the
+  real `SupabaseClient`, then runs it against the recorder. It fails if a
+  builder method that real code needs is missing.
+- **CI installs the packed tarball** on Node 20 in an empty project and runs it,
+  the way a user would.
 
 ## Contributing
 
-Contributions are genuinely welcome, including the small ones: a missing builder
-method, a confusing sentence in this README, a use case that does not fit. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for how to get set up, which is three commands.
-
-Everyone taking part is asked to follow the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+Small contributions are welcome: a missing builder method, a confusing
+sentence, a use case that does not fit. [CONTRIBUTING.md](CONTRIBUTING.md)
+explains the setup. Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Licence
 
