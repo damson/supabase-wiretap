@@ -9,10 +9,11 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Each entry in `calls` keeps the chain it had when it was awaited. Awaiting a
-  builder, adding a filter to it and awaiting it again added that filter to the
-  first recorded call too, so an assertion on the earlier query could pass for
-  the wrong reason.
+- Each entry in `calls` keeps the list of operations it had when it was
+  awaited. Awaiting a builder, adding a filter to it and awaiting it again added
+  that filter to the first recorded call too, so an assertion on the earlier
+  query could pass for the wrong reason. Object arguments, such as an insert
+  payload, are still recorded by reference.
 
 ## [0.1.2] - 2026-10-04
 

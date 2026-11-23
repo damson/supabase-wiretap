@@ -31,7 +31,7 @@ describe('recording a query', () => {
     expect(fake.calls).toHaveLength(1);
   });
 
-  it('keeps each recorded call as it was when awaited, even if the builder is extended after', async () => {
+  it('keeps the operation list of each call as it was when awaited, even if the builder is extended after', async () => {
     const fake = fakeSupabase();
     const query = fake.client.from('entries').select('id');
     await query;

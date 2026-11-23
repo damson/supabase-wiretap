@@ -121,8 +121,8 @@ export class QueryRecorder implements PromiseLike<Answer> {
     onfulfilled?: ((value: Answer) => R1 | PromiseLike<R1>) | null,
     onrejected?: ((reason: unknown) => R2 | PromiseLike<R2>) | null,
   ): PromiseLike<R1 | R2> {
-    // A copy, so extending this builder later cannot rewrite a call already
-    // recorded.
+    // A copy of the list, so extending this builder later cannot rewrite a
+    // call already recorded. The arguments inside it are not copied.
     const call: Call = { table: this.table, ops: [...this.ops] };
     this.calls.push(call);
     return settle(this.responder, call).then(onfulfilled, onrejected);
