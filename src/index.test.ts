@@ -31,6 +31,19 @@ describe('recording a query', () => {
     expect(fake.calls).toHaveLength(1);
   });
 
+  it('keeps each recorded call as it was when awaited, even if the builder is extended after', async () => {
+    const fake = fakeSupabase();
+    const query = fake.client.from('entries').select('id');
+    await query;
+    await query.eq('status', 'pending');
+
+    expect(at(fake.calls, 0).ops).toEqual([['select', 'id']]);
+    expect(at(fake.calls, 1).ops).toEqual([
+      ['select', 'id'],
+      ['eq', 'status', 'pending'],
+    ]);
+  });
+
   it('records every method it claims to record', async () => {
     const fake = fakeSupabase();
     let builder = fake.client.from('entries');

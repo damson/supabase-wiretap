@@ -7,6 +7,13 @@ this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Each entry in `calls` keeps the chain it had when it was awaited. Awaiting a
+  builder, adding a filter to it and awaiting it again added that filter to the
+  first recorded call too, so an assertion on the earlier query could pass for
+  the wrong reason.
+
 ## [0.1.2] - 2026-10-04
 
 No change to the package. Every line below is about how it reaches the registry
